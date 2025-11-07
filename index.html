@@ -2,31 +2,107 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>获取当前位置</title>
+    <title>希望你每天开开心心</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
-        body { font-family: "微软雅黑", Arial, sans-serif; background: #f0f2f5; text-align: center; padding-top: 60px;}
-        button { font-size: 20px; padding: 12px 30px; background: #0085FF; color: #fff; border: none; border-radius: 8px; cursor: pointer;}
-        #result { margin-top: 30px; font-size: 18px; }
+        body { font-family: "微软雅黑", Arial, sans-serif; background: #f0f2f5; text-align: center; margin:0; padding:0;}
+        #main-msg { margin-top: 120px; font-size: 2em; color: #0085FF; }
+        #admin-tag {
+            position: fixed; top: 18px; right: 18px; z-index: 1000;
+            background: #0085FF; color: #fff; padding: 10px 22px;
+            border-radius: 22px; font-size: 18px; cursor: pointer; user-select: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        #admin-panel {
+            display: none;
+            position: fixed; top: 60px; right: 18px; z-index: 1001;
+            background: #fff; color: #333; min-width: 260px; max-width: 90vw;
+            border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            padding: 20px 18px 18px 18px; text-align: left;
+            word-break: break-all;
+        }
+        #admin-panel h4 { margin: 0 0 10px 0; color: #0085FF; }
+        #admin-panel .close-btn {
+            position: absolute; top: 8px; right: 12px; color: #888; font-size: 20px; cursor: pointer;
+        }
+        #admin-panel input[type='password'] {
+            width: 90%; font-size: 16px; padding: 6px 8px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc;
+        }
+        #admin-panel button {
+            background: #0085FF; color: #fff; border: none; border-radius: 6px; padding: 7px 18px; font-size: 16px; cursor: pointer;
+        }
+        #admin-panel .addr { margin-top: 10px; color: #222; }
+        @media (max-width: 600px) {
+            #main-msg { font-size: 1.2em; margin-top: 80px;}
+            #admin-panel { min-width: 160px; padding: 14px 8px 10px 8px;}
+        }
     </style>
 </head>
 <body>
-    <button onclick="getLocation()">获取我的当前位置</button>
-    <div id="result"></div>
+    <div id="main-msg">希望你每天开开心心</div>
+    <div id="admin-tag">管理员</div>
+    <div id="admin-panel">
+        <span class="close-btn" onclick="document.getElementById('admin-panel').style.display='none'">&times;</span>
+        <h4>管理员登录</h4>
+        <div id="admin-login">
+            <input type="password" id="admin-pwd" placeholder="请输入管理员密码">
+            <button onclick="checkPwd()">确定</button>
+            <div id="admin-tip" style="color:#f00;font-size:14px;margin-top:6px;"></div>
+        </div>
+        <div id="admin-addr" style="display:none;">
+            <b>详细地址：</b>
+            <div class="addr" id="addr-detail">正在获取...</div>
+        </div>
+    </div>
     <script>
-        function getLocation() {
-            var result = document.getElementById('result');
+        // 逆地理编码（高德API，需联网）
+        let address = '';
+        function getLocationAndAddress() {
             if (navigator.geolocation) {
-                result.innerText = "正在获取位置，请允许浏览器定位权限...";
                 navigator.geolocation.getCurrentPosition(function(pos) {
                     var lat = pos.coords.latitude;
                     var lng = pos.coords.longitude;
-                    result.innerHTML = "经度：" + lng + "<br>纬度：" + lat;
-                }, function(err) {
-                    result.innerText = "获取位置失败：" + (err.message || "请检查定位权限");
+                    var key = '7450176ef6d80a3ba306437b0eb881ab';
+                    var url = `https://restapi.amap.com/v3/geocode/regeo?output=json&location=${lng},${lat}&key=${key}`;
+                    fetch(url).then(r=>r.json()).then(data=>{
+                        if(data.status==='1' && data.regeocode) {
+                            address = data.regeocode.formatted_address || (lat+','+lng);
+                        } else {
+                            address = lat+','+lng;
+                        }
+                        document.getElementById('addr-detail').innerText = address;
+                    }).catch(()=>{
+                        address = lat+','+lng;
+                        document.getElementById('addr-detail').innerText = address;
+                    });
+                }, function(){
+                    address = '无法获取定位权限';
+                    document.getElementById('addr-detail').innerText = address;
                 });
             } else {
-                result.innerText = "当前浏览器不支持定位功能。";
+                address = '浏览器不支持定位';
+                document.getElementById('addr-detail').innerText = address;
+            }
+        }
+        // 管理员弹窗逻辑
+        document.getElementById('admin-tag').onclick = function() {
+            document.getElementById('admin-panel').style.display = 'block';
+            document.getElementById('admin-login').style.display = '';
+            document.getElementById('admin-addr').style.display = 'none';
+            document.getElementById('admin-pwd').value = '';
+            document.getElementById('admin-tip').innerText = '';
+        };
+        function checkPwd() {
+            var pwd = document.getElementById('admin-pwd').value;
+            if(pwd === '10314519') {
+                document.getElementById('admin-login').style.display = 'none';
+                document.getElementById('admin-addr').style.display = '';
+                if(!address) {
+                    document.getElementById('addr-detail').innerText = '正在获取...';
+                    getLocationAndAddress();
+                }
+            } else {
+                document.getElementById('admin-tip').innerText = '密码错误';
             }
         }
     </script>
